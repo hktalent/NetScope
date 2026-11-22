@@ -1,0 +1,23 @@
+# build output
+/netscope
+/netscope.exe
+/netscope-linux
+/netscope-darwin
+/dist/
+
+# runtime
+/run.log
+*.log
+
+# downloaded GeoIP data (fetched at first run, not tracked)
+/data/*.mmdb
+/data/*.gz
+
+# local screenshot containing personal hostnames (public copy lives in docs/)
+/demo.jpg
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

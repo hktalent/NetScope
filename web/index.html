@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NetScope · 我在连谁</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand"><span class="dot" id="live"></span><h1>NetScope</h1><span class="iface" id="iface"></span></div>
+  <div class="rates">
+    <div class="rate down"><span class="arrow">↓</span><span class="num" id="rateDown">0 B</span><span class="unit">/s</span></div>
+    <div class="rate up"><span class="arrow">↑</span><span class="num" id="rateUp">0 B</span><span class="unit">/s</span></div>
+  </div>
+  <canvas id="spark" width="300" height="42"></canvas>
+  <div class="stats">
+    <span>连接 <b id="statConns">0</b></span>
+    <span>活跃 <b id="statActive">0</b></span>
+    <span>App <b id="statApps">0</b></span>
+    <span>国家 <b id="statCountries">0</b></span>
+    <span>累计 <b id="statTotal">0 B</b></span>
+  </div>
+</header>
+<div class="toolbar">
+  <input id="search" type="search" placeholder="搜索 域名 / IP / 国家 / App / URL">
+  <label class="chk"><input type="checkbox" id="onlyAbroad"> 只看境外</label>
+  <label class="chk"><input type="checkbox" id="onlyRate"> 只看有流量</label>
+  <button id="pause">暂停</button>
+  <a class="btn" href="/api/export.csv">导出 CSV</a>
+  <span class="hint" id="hint"></span>
+</div>
+<main>
+  <table id="tbl">
+    <thead><tr>
+      <th data-k="domain" class="w-domain">域名</th>
+      <th data-k="ip" class="w-ip">IP</th>
+      <th data-k="country" class="w-cc">国家</th>
+      <th data-k="app" class="w-app">App(Pid)</th>
+      <th data-k="proto" class="w-proto">协议</th>
+      <th data-k="bytes" class="w-num">数据</th>
+      <th data-k="rate" class="w-num">速率/s</th>
+      <th data-k="url" class="w-url">URL</th>
+    </tr></thead>
+    <tbody id="rows"></tbody>
+  </table>
+  <div class="empty" id="empty">正在收集连接…（3 秒内出现数据）</div>
+</main>
+<div class="toast" id="toast"></div>
+<script src="/app.js"></script>
+</body>
+</html>
