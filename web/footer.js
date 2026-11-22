@@ -5,7 +5,7 @@
  * 模板　：/Users/51pwn/MyWork/site-links/footer.template.js
  * 重新生成：python3 /Users/51pwn/MyWork/site-links/sync.py
  *
- * 生成时间：2026-11-22 16:33:56　版本：20261122a　站点：NetScope
+ * 生成时间：2026-11-22 18:26:54　版本：20261122a　站点：NetScope
  */
 (function () {
   var CFG = {
@@ -37,17 +37,22 @@
       },
       {
         "label": "见到你",
-        "href": "https://vi.51pwn.com/",
+        "href": "https://vi.51pwn.com",
         "external": true
       },
       {
         "label": "远程管理",
-        "href": "http://127.0.0.1:8088/",
+        "href": "http://127.0.0.1:8088",
         "external": true
       },
       {
         "label": "域名管理",
-        "href": "http://127.0.0.1:8787/",
+        "href": "http://127.0.0.1:8787",
+        "external": true
+      },
+      {
+        "label": "网络监控",
+        "href": "http://127.0.0.1:8899",
         "external": true
       }
     ],
