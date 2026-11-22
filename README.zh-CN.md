@@ -118,6 +118,11 @@ go build -o netscope ./cmd/netscope
 
 产物：`./netscope`（macOS/Linux）或 `netscope.exe`（Windows）。
 
+预编译二进制：推 `v*` tag 时由 [`.github/workflows/release.yml`](.github/workflows/release.yml)
+在 GitHub Actions 上自动编译并发布到 [Releases](https://github.com/hktalent/NetScope/releases)，
+覆盖 macOS（arm64 / amd64）、Linux（amd64 / arm64）、Windows（amd64），每个压缩包都带
+`.sha256` 校验值。版本号已写进二进制：`./netscope -version`。
+
 交叉编译：
 
 ```bash

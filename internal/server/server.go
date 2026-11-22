@@ -32,6 +32,7 @@ func (s *Server) Listen(addr string) error {
 	mux.HandleFunc("/", s.index)
 	mux.Handle("/app.js", http.FileServer(http.FS(web.FS)))
 	mux.Handle("/style.css", http.FileServer(http.FS(web.FS)))
+	mux.Handle("/footer.js", http.FileServer(http.FS(web.FS)))
 	mux.HandleFunc("/api/snapshot", s.snapshot)
 	mux.HandleFunc("/api/stream", s.stream)
 	mux.HandleFunc("/api/export.csv", s.exportCSV)

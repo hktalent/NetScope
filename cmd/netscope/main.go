@@ -23,6 +23,9 @@ import (
 	"netscope/internal/server"
 )
 
+// version 由构建注入：go build -ldflags "-X main.version=v1.2.3"
+var version = "dev"
+
 func main() {
 	var (
 		iface   = flag.String("iface", "auto", "网卡名（auto=默认路由网卡）")
@@ -33,8 +36,14 @@ func main() {
 		noGeo   = flag.Bool("no-geo", false, "禁用 GeoIP（不下载、不显示国家）")
 		lsofInt = flag.Duration("lsof", 3*time.Second, "进程归因采样间隔")
 		showLst = flag.Bool("list", false, "只列出网卡后退出")
+		showVer = flag.Bool("version", false, "显示版本后退出")
 	)
 	flag.Parse()
+
+	if *showVer {
+		fmt.Println(version)
+		return
+	}
 
 	if *showLst {
 		devs, err := pcap.FindAllDevs()
@@ -128,7 +137,7 @@ func main() {
 		}
 	}()
 
-	fmt.Printf("\n  NetScope 已启动 →  http://%s\n  网卡 %s · 按 Ctrl+C 退出\n\n", addr, eng.Name)
+	fmt.Printf("\n  NetScope %s 已启动 →  http://%s\n  网卡 %s · 按 Ctrl+C 退出\n\n", version, addr, eng.Name)
 	<-ctx.Done()
 	log.Println("正在退出…")
 	time.Sleep(300 * time.Millisecond)

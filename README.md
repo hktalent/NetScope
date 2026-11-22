@@ -118,6 +118,11 @@ go build -o netscope ./cmd/netscope
 
 Output: `./netscope` (macOS/Linux) or `netscope.exe` (Windows).
 
+Prebuilt binaries: every tag `v*` is compiled by [`.github/workflows/release.yml`](.github/workflows/release.yml)
+on GitHub Actions and attached to [Releases](https://github.com/hktalent/NetScope/releases) —
+macOS (arm64 / amd64), Linux (amd64 / arm64) and Windows (amd64), each archive shipped with a
+`.sha256` checksum. Build version is embedded: `./netscope -version`.
+
 Cross-compilation:
 
 ```bash

@@ -1,0 +1,183 @@
+name: release
+
+# 推一个 tag（如 v0.1.0）就会自动编译 macOS / Windows / Linux 三平台二进制，
+# 打包成 tar.gz / zip（附 sha256），附到对应的 GitHub Release。
+# 也支持手动触发：填一个已存在的 tag 补发。
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "要发布的已存在 tag（如 v0.1.0）"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.event.inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+env:
+  CGO_ENABLED: "1"          # gopacket/pcap 是 cgo，三个平台都必须开
+  NPACKAGE_SDK_URL: https://npcap.com/dist/npcap-sdk-1.15.zip
+
+jobs:
+  build:
+    name: ${{ matrix.goos }}-${{ matrix.goarch }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Linux：cgo 依赖 libpcap，用原生 runner 编译（cgo 不做跨架构交叉）
+          - { runner: ubuntu-latest,    goos: linux,   goarch: amd64, ext: "",      cc: "" }
+          - { runner: ubuntu-24.04-arm, goos: linux,   goarch: arm64, ext: "",      cc: "" }
+          # macOS：clang 可用 -arch 切架构，arm64 runner 上顺带产出 Intel 版，不依赖已退役的 macos-13
+          - { runner: macos-latest,     goos: darwin,  goarch: arm64, ext: "",      cc: "" }
+          - { runner: macos-latest,     goos: darwin,  goarch: amd64, ext: "",      cc: "clang -arch x86_64" }
+          # Windows：ubuntu 上用 mingw-w64 + Npcap SDK 交叉编译（等价于 Makefile 里的 build-win）
+          - { runner: ubuntu-latest,    goos: windows, goarch: amd64, ext: ".exe",  cc: "" }
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Resolve version
+        run: |
+          V="${{ github.event.inputs.tag }}"
+          if [ -z "$V" ]; then V="${GITHUB_REF_NAME}"; fi
+          echo "VERSION=$V" >> "$GITHUB_ENV"
+          echo "version = $V"
+
+      # —— Linux：libpcap 开发包 ——
+      - name: Install libpcap (linux)
+        if: matrix.goos == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libpcap-dev
+
+      # —— Windows：mingw-w64 + Npcap SDK（wpcap 的头与导入库）——
+      - name: Install mingw-w64 + Npcap SDK (windows)
+        if: matrix.goos == 'windows'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y mingw-w64
+          curl -fsSL -o /tmp/npcap-sdk.zip "${NPACKAGE_SDK_URL}"
+          unzip -q /tmp/npcap-sdk.zip -d /tmp/npcap-sdk
+          ls /tmp/npcap-sdk/Include/pcap/pcap.h /tmp/npcap-sdk/Lib/x64
+
+      - name: Build
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          EXT: ${{ matrix.ext }}
+          CC_OVERRIDE: ${{ matrix.cc }}
+        run: |
+          set -eu
+          OUT="netscope${EXT}"
+          if [ "$GOOS" = "windows" ]; then
+            export CC=x86_64-w64-mingw32-gcc
+            export CGO_CFLAGS="-I/tmp/npcap-sdk/Include"
+            export CGO_LDFLAGS="-L/tmp/npcap-sdk/Lib/x64"
+          elif [ -n "${CC_OVERRIDE}" ]; then
+            export CC="${CC_OVERRIDE}"
+          fi
+          go build -trimpath -ldflags "-s -w -X main.version=${VERSION}" -o "${OUT}" ./cmd/netscope
+          ls -l "${OUT}"
+
+      - name: Smoke test
+        if: matrix.goos != 'windows'
+        run: |
+          chmod +x netscope
+          ./netscope -version
+          ./netscope -list | head -10
+
+      - name: Package
+        run: |
+          set -eu
+          NAME="netscope_${VERSION}_${{ matrix.goos }}_${{ matrix.goarch }}"
+          mkdir -p "dist/${NAME}"
+          cp "netscope${{ matrix.ext }}" LICENSE README.md "dist/${NAME}/"
+          cd dist
+          if [ "${{ matrix.goos }}" = "windows" ]; then
+            zip -qr "${NAME}.zip" "${NAME}"
+            FILE="${NAME}.zip"
+          else
+            tar -czf "${NAME}.tar.gz" "${NAME}"
+            FILE="${NAME}.tar.gz"
+          fi
+          if command -v sha256sum >/dev/null 2>&1; then
+            sha256sum "${FILE}" > "${NAME}.sha256"
+          else
+            shasum -a 256 "${FILE}" > "${NAME}.sha256"
+          fi
+          ls -l
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pkg-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: dist/*
+          if-no-files-found: error
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: List assets
+        run: ls -l dist
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.inputs.tag || github.ref_name }}
+          name: NetScope ${{ github.event.inputs.tag || github.ref_name }}
+          generate_release_notes: true
+          files: |
+            dist/*.tar.gz
+            dist/*.zip
+            dist/*.sha256
+          body: |
+            ### Download
+
+            Pick the archive matching your platform (each includes the binary, `LICENSE` and `README.md`,
+            plus a `.sha256` checksum):
+
+            | Platform | Asset |
+            | --- | --- |
+            | macOS (Apple Silicon / M-series) | `netscope_<version>_darwin_arm64.tar.gz` |
+            | macOS (Intel) | `netscope_<version>_darwin_amd64.tar.gz` |
+            | Linux (x86_64) | `netscope_<version>_linux_amd64.tar.gz` |
+            | Linux (arm64) | `netscope_<version>_linux_arm64.tar.gz` |
+            | Windows (x64) | `netscope_<version>_windows_amd64.zip` |
+
+            ### Run
+
+            ```bash
+            tar -xzf netscope_<version>_<os>_<arch>.tar.gz
+            cd netscope_<version>_<os>_<arch>
+            ./netscope -iface auto -port 8899    # then open http://127.0.0.1:8899
+            ./netscope -version                  # print the build version
+            ./netscope -list                     # list capture interfaces
+            ```
+
+            ### Platform notes
+
+            - **Linux**: links against `libpcap` — `sudo apt install libpcap-dev` (Debian/Ubuntu) or
+              `sudo dnf install libpcap-devel` (Fedora/RHEL).
+            - **Windows**: requires **[Npcap](https://npcap.com/)** (install with "WinPcap API-compatible mode").
+            - **macOS**: uses the system libpcap; capturing all processes may need `sudo` for the App column.
+            - Running as a normal user may miss packets/processes owned by other users; `sudo` widens coverage.
+            - First run downloads the ~4 MB DB-IP Lite country database into `data/` (nothing is sent anywhere).
