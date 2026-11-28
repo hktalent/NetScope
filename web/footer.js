@@ -5,7 +5,7 @@
  * 模板　：/Users/51pwn/MyWork/site-links/footer.template.js
  * 重新生成：python3 /Users/51pwn/MyWork/site-links/sync.py
  *
- * 生成时间：2026-11-22 18:26:54　版本：20261122a　站点：NetScope
+ * 生成时间：2026-11-27 18:10:47　版本：20261127a　站点：NetScope
  */
 (function () {
   var CFG = {
@@ -15,6 +15,11 @@
     "footerClass": "app-footer",
     "headerSel": ".top-chrome",
     "links": [
+      {
+        "label": "热门AI",
+        "href": "https://ai.51pwn.com/",
+        "external": true
+      },
       {
         "label": "选股策略",
         "href": "https://stock.51pwn.com/",
